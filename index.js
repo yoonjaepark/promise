@@ -13,27 +13,65 @@ const STATUS = {
  * @param {Function} fn
  */
 function Promise(fn) {
+  /** @type {STATUS} */
+  this.status = STATUS.PENDING;
+  /** @type {null|Function} */
+  this.onFulfilledCallback = null;
+  /** @type {null|Function} */
+  this.onRejectedCallback = null;
+  /** @type {null|Function} */
+  this.onFinallyCallback = null;
   fn(this.constructor.resolve.bind(this), this.constructor.reject.bind(this));
 }
 
 Promise.resolve = function (value) {
+  this.status = STATUS.FULFILLED;
   this.value = value;
+  if (this.onFulfilledCallback !== null) {
+    this.onFulfilledCallback(value);
+    this.onFinallyCallback(value);
+  }
 };
 
 Promise.reject = function (value) {
+  this.status = STATUS.REJECTED;
   this.value = value;
+  if (this.onRejectedCallback !== null) {
+    this.onRejectedCallback(value);
+    this.onFinallyCallback(value);
+  }
 };
 
-Promise.prototype.then = function (callback) {
-  callback(this.value)
+Promise.prototype.then = function (cb) {
+  if (this.status === STATUS.PENDING) {
+    this.onFulfilledCallback = cb;
+  }
+  if (this.status === STATUS.FULFILLED) {
+    cb(this.value);
+  }
+  return this;
 };
 
-Promise.prototype.catch = function () {};
+Promise.prototype.catch = function (cb) {
+  if (this.status === STATUS.PENDING) {
+    this.onRejectedCallback = cb;
+  }
+  if (this.status === STATUS.REJECTED) {
+    cb(this.value);
+  }
+  return this;
+};
 
-Promise.prototype.finally = function () {};
+Promise.prototype.finally = function (cb) {
+  if (this.status === STATUS.PENDING) {
+    this.onFinallyCallback = cb;
+    return;
+  }
+  cb(this.value);
+};
 
 Promise.all = function () {};
 
 export {
   Promise
-}
+};
