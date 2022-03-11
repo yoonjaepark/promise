@@ -21,6 +21,8 @@ function Promise(fn) {
   this.onRejectedCallback = null;
   /** @type {null|Function} */
   this.onFinallyCallback = null;
+  /** @type {Promise} */
+  this.promiseInstance = null;
   fn(this.constructor.resolve.bind(this), this.constructor.reject.bind(this));
 }
 
@@ -29,7 +31,9 @@ Promise.resolve = function (value) {
   this.value = value;
   if (this.onFulfilledCallback !== null) {
     this.onFulfilledCallback(value);
-    this.onFinallyCallback(value);
+    if (this.promiseInstance.onFinallyCallback !== null) {
+      this.promiseInstance.onFinallyCallback(value);
+    }
   }
 };
 
@@ -38,18 +42,29 @@ Promise.reject = function (value) {
   this.value = value;
   if (this.onRejectedCallback !== null) {
     this.onRejectedCallback(value);
-    this.onFinallyCallback(value);
+  } else {
+    this.promiseInstance.reject(value);
   }
 };
 
 Promise.prototype.then = function (cb) {
-  if (this.status === STATUS.PENDING) {
-    this.onFulfilledCallback = cb;
-  }
-  if (this.status === STATUS.FULFILLED) {
-    cb(this.value);
-  }
-  return this;
+  this.promiseInstance = new Promise(function (resolve, reject) {
+    if (this.status === STATUS.PENDING) {
+      this.onFulfilledCallback = function () {
+        const result = cb(this.value);
+        if (result instanceof Promise) {
+          result.then(resolve, reject);
+        } else {
+          resolve(result);
+        }
+      }
+    }
+    if (this.status === STATUS.FULFILLED) {
+      cb(this.value);
+    }
+  }.bind(this))
+
+  return this.promiseInstance;
 };
 
 Promise.prototype.catch = function (cb) {
