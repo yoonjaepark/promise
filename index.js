@@ -23,6 +23,9 @@ function Promise(fn) {
   this.onFinallyCallback = null;
   /** @type {Promise} */
   this.promiseInstance = null;
+  /** @type {any} */
+  this.value = null;
+
   fn(this.constructor.resolve.bind(this), this.constructor.reject.bind(this));
 }
 
@@ -84,8 +87,40 @@ Promise.prototype.finally = function (cb) {
   }
   cb(this.value);
 };
+  
+Promise.all = function (arr) {
+  return new Promise(function (resolve, reject) {
+    const result = arr.map(() => ({
+      state: STATUS.PENDING,
+      value: null
+    }));
 
-Promise.all = function () {};
+    arr.forEach((iter, idx) => {
+      if (iter instanceof Promise === false) {
+        result[idx] = {
+          state: STATUS.FULFILLED,
+          value: iter
+        };
+        const isDone = !result.some(v => v.state === STATUS.FULFILLED);
+        if (isDone) resolve(result.map(v => v.value));
+        return;
+      }
+      iter.then(value => {
+        result[idx] = {
+          state: STATUS.FULFILLED,
+          value
+        };
+        const isDone = !result.some(v => v.state === STATUS.PENDING);
+        if (isDone) resolve(result.map(v => v.value));
+      }).catch(err => {
+        reject(err)
+      });
+    });
+  });
+};
+
+
+
 
 export {
   Promise
