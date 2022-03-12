@@ -32,7 +32,7 @@ function Promise(fn) {
 Promise.resolve = function (value) {
   this.status = STATUS.FULFILLED;
   this.value = value;
-  if (this.onFulfilledCallback !== null) {
+  if (this.onFulfilledCallback) {
     this.onFulfilledCallback(value);
     if (this.promiseInstance.onFinallyCallback !== null) {
       this.promiseInstance.onFinallyCallback(value);
@@ -46,9 +46,20 @@ Promise.reject = function (value) {
   if (this.onRejectedCallback !== null) {
     this.onRejectedCallback(value);
   } else {
-    this.promiseInstance.reject(value);
+    const instance = getLastInstance(this.promiseInstance, value);
+    instance.onRejectedCallback(value)
+    if (instance.onFinallyCallback !== null) {
+      instance.onFinallyCallback(value);
+    }
   }
 };
+
+function getLastInstance(instance, value) {
+  if (instance.onRejectedCallback === null && instance.promiseInstance) {
+    return getLastInstance(instance.promiseInstance, value);
+  }
+  return instance
+}
 
 Promise.prototype.then = function (cb) {
   this.promiseInstance = new Promise(function (resolve, reject) {
@@ -92,7 +103,6 @@ Promise.all = function (arr) {
   return new Promise(function (resolve, reject) {
     const result = arr.map(() => ({
       state: STATUS.PENDING,
-      value: null
     }));
 
     arr.forEach((iter, idx) => {
@@ -118,9 +128,6 @@ Promise.all = function (arr) {
     });
   });
 };
-
-
-
 
 export {
   Promise
