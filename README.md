@@ -8,3 +8,49 @@
 * Promise.prototype.catch(func) 
 * Promise.prototype.finally(func) 
   - Just guarantee that it should run on the latest version of Chrome browser.
+
+
+## example
+```
+var p1 = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    resolve("test1");
+  }, 3000);
+});
+var p2 = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    resolve("test2");
+  }, 2000);
+});
+Promise.all([p1, p2]).then(values => {
+  console.log(values); // ["test1", "test2"]
+});
+
+var p3 = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    resolve("test3");
+  }, 2000);
+});
+p3.then((res) => {
+  return res; // "test3"
+})
+.catch((err) => console.error('error', err))
+.finally((res) => {
+  console.log("This Promise is finally settled!", res) // This Promise is finally settled! test3
+});
+
+var p4 = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    reject("test4");
+  }, 2000);
+});
+p4.then((res) => {
+  return res;
+})
+.catch((err) => {
+  console.error('error', err) // error test4
+})
+.finally((res) => {
+  console.log("This Promise is finally settled!", res) // This Promise is finally settled! test4
+});
+```
